@@ -84,6 +84,7 @@ class ResaleOrderServiceTest {
                 .order(order2).product(product2).quantity(500).build();
 
         ResaleOrderDTO resaleOrderDTO = ResaleOrderDTO.builder()
+                .id(1L)
                 .orderNumber(orderNumber)
                 .build();
 
