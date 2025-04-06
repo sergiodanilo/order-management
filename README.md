@@ -39,9 +39,18 @@ You can call the following endpoint to create mock data in your database:
 ### `GET /api/startup`
 
 This will automatically generate:
-- Client
-- Resale
-- Products
-- Order with multiple products
+- 1 Client
+- 1 Resale
+- 10 Products
+- 1 Order with 5 products
+
+### Send a batch of order to API
+
+You can use the following endpoint to send a batch of orders to the external API (mocked):
+### `POST /api/resale-orders`
+The payload is a list of order IDs:
+```json
+[1, 2, 3]
+```
 
 You can customize the logic in StartupController to generate more data if needed.
