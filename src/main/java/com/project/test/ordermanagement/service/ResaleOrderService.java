@@ -14,12 +14,14 @@ import com.project.test.ordermanagement.repository.OrderProductRepository;
 import com.project.test.ordermanagement.repository.OrderRepository;
 import com.project.test.ordermanagement.repository.ResaleOrderRepository;
 import com.project.test.ordermanagement.service.base.CRUDBaseServiceImpl;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,88 +32,107 @@ public class ResaleOrderService extends CRUDBaseServiceImpl<ResaleOrder, Long> {
     private final OrderRepository orderRepository;
     private final OrderProductRepository orderProductRepository;
 
-    public ResaleOrderService(ResaleOrderRepository repository,
-                              ResaleOrderApi resaleOrderApi,
-                              OrderRepository orderRepository,
-                              OrderProductRepository orderProductRepository) {
+    public ResaleOrderService(
+            ResaleOrderRepository repository,
+            ResaleOrderApi resaleOrderApi,
+            OrderRepository orderRepository,
+            OrderProductRepository orderProductRepository
+    ) {
         super(repository);
         this.resaleOrderApi = resaleOrderApi;
         this.orderRepository = orderRepository;
         this.orderProductRepository = orderProductRepository;
     }
 
+    @Transactional
     public ResaleOrderDTO sendResaleOrders(List<Long> orderIds) {
         ResaleOrderDTO resaleOrderDTO = resaleOrderApi.sendResaleOrders();
-
         List<Order> orders = orderRepository.findAllById(orderIds);
+
         validateOrdersQuantity(orders);
 
         if (resaleOrderDTO.getOrderNumber() != null) {
-            orders.forEach(order -> order.setStatus(OrderStatus.RECEIVED));
-            orderRepository.saveAll(orders);
-
-            ResaleOrder resaleOrder = ResaleOrder.builder()
-                    .id(resaleOrderDTO.getId())
-                    .orderNumber(resaleOrderDTO.getOrderNumber())
-                    .orderDate(LocalDateTime.now())
-                    .orders(orders)
-                    .build();
-
-            this.save(resaleOrder);
+            updateOrdersToReceived(orders);
+            ResaleOrder resaleOrder = saveResaleOrder(resaleOrderDTO.getOrderNumber(), orders);
+            resaleOrderDTO.setId(resaleOrder.getId());
         }
 
-        Set<OrderDTO> orderDTOs = orders.stream().map(order ->
-                OrderDTO.builder()
-                        .orderNumber(order.getId())
-                        .taxId(order.getClient().getTaxId())
-                        .orderItems(generateOrderItems(order))
-                        .date(order.getDate())
-                        .totalAmount(order.getTotalAmount())
-                        .status(order.getStatus())
-                        .client(order.getClient().getName())
-                        .build()
-        ).collect(Collectors.toSet());
-
-        resaleOrderDTO.setOrders(orderDTOs);
+        resaleOrderDTO.setOrders(buildOrderDTOs(orders));
         return resaleOrderDTO;
     }
 
     public ResaleOrderDTO mapResaleOrderToDTO(ResaleOrder resaleOrder) {
+        Set<OrderDTO> orderDTOs = resaleOrder.getOrders().stream()
+                .map(this::buildOrderDTO)
+                .collect(Collectors.toSet());
+
         return ResaleOrderDTO.builder()
                 .id(resaleOrder.getId())
                 .orderNumber(resaleOrder.getOrderNumber())
-                .orders(resaleOrder.getOrders().stream()
-                        .map(order -> OrderDTO.builder()
-                                .orderNumber(order.getId())
-                                .status(order.getStatus())
-                                .date(order.getDate())
-                                .totalAmount(order.getTotalAmount())
-                                .client(order.getClient().getName())
-                                .address(order.getClient().getAddress())
-                                .orderItems(generateOrderItems(order))
-                                .build())
-                        .collect(Collectors.toSet()))
+                .orders(orderDTOs)
                 .build();
     }
 
+    private void validateOrdersQuantity(List<Order> orders) {
+        int totalQuantity = orders.stream()
+                .mapToInt(order -> {
+                    Set<Long> productIds = order.getProducts().stream()
+                            .map(Product::getId)
+                            .collect(Collectors.toSet());
+                    return orderProductRepository.findByOrderIdAndProductIdsIn(order.getId(), productIds).stream()
+                            .mapToInt(OrderProduct::getQuantity)
+                            .sum();
+                })
+                .sum();
 
-    private Set<OrderItemDTO> generateOrderItems(Order order) {
-        return order.getProducts().stream()
-                .map(product -> OrderItemDTO.builder()
-                        .productId(product.getId())
-                        .quantity(orderProductRepository.findByOrderIdAndProductId(order.getId(), product.getId()).getQuantity())
-                        .build())
+        if (totalQuantity < 1000) {
+            throw new ResaleOrderException("Orders quantity is less than 1000");
+        }
+    }
+
+    private void updateOrdersToReceived(List<Order> orders) {
+        orders.forEach(order -> order.setStatus(OrderStatus.RECEIVED));
+        orderRepository.saveAll(orders);
+    }
+
+    private ResaleOrder saveResaleOrder(UUID orderNumber, List<Order> orders) {
+        ResaleOrder resaleOrder = ResaleOrder.builder()
+                .orderNumber(orderNumber)
+                .orderDate(LocalDateTime.now())
+                .orders(orders)
+                .build();
+        return this.save(resaleOrder);
+    }
+
+    private Set<OrderDTO> buildOrderDTOs(List<Order> orders) {
+        return orders.stream()
+                .map(this::buildOrderDTO)
                 .collect(Collectors.toSet());
     }
 
-    private void validateOrdersQuantity(List<Order> orders) {
-        int sum = 0;
-        for (Order order : orders) {
-            Set<Long> productIds = order.getProducts().stream().map(Product::getId).collect(Collectors.toSet());
-            List<OrderProduct> orderProducts = orderProductRepository.findByOrderIdAndProductIdsIn(order.getId(), productIds);
-            sum += orderProducts.stream().mapToInt(OrderProduct::getQuantity).sum();
-        }
-        if (sum < 1000) throw new ResaleOrderException("Orders quantity is less than 1000");
+    private OrderDTO buildOrderDTO(Order order) {
+        return OrderDTO.builder()
+                .orderNumber(order.getId())
+                .taxId(order.getClient().getTaxId())
+                .client(order.getClient().getName())
+                .address(order.getClient().getAddress())
+                .date(order.getDate())
+                .totalAmount(order.getTotalAmount())
+                .status(order.getStatus())
+                .orderItems(generateOrderItems(order))
+                .build();
+    }
+
+    private Set<OrderItemDTO> generateOrderItems(Order order) {
+        return order.getProducts().stream()
+                .map(product -> {
+                    OrderProduct op = orderProductRepository.findByOrderIdAndProductId(order.getId(), product.getId());
+                    return OrderItemDTO.builder()
+                            .productId(product.getId())
+                            .quantity(op.getQuantity())
+                            .build();
+                })
+                .collect(Collectors.toSet());
     }
 
 }

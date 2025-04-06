@@ -12,6 +12,7 @@ import com.project.test.ordermanagement.repository.OrderProductRepository;
 import com.project.test.ordermanagement.repository.OrderRepository;
 import com.project.test.ordermanagement.repository.ProductRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,59 +30,20 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final OrderProductRepository orderProductRepository;
 
-    public Optional<OrderDTO> registerOrder(OrderDTO order) {
-        Client client = clientRepository.findByTaxId(order.getTaxId())
+    @Transactional
+    public Optional<OrderDTO> registerOrder(OrderDTO orderDTO) {
+        Client client = clientRepository.findByTaxId(orderDTO.getTaxId())
                 .orElseThrow(() -> new EntityNotFoundException("Client not found"));
 
-        Set<Long> productIds = order.getOrderItems().stream()
-                .map(OrderItemDTO::getProductId).collect(Collectors.toSet());
-        Set<Product> products = new HashSet<>(productRepository.findAllById(productIds));
-        Map<Long, Product> mapProducts = new HashSet<>(products).stream()
-                .collect(Collectors.toMap(Product::getId, product -> product));
+        Map<Long, Product> productMap = getProductMap(orderDTO);
 
-        Order newOrder = Order.builder()
-                .date(LocalDateTime.now())
-                .products(products)
-                .client(client)
-                .totalAmount(products.stream()
-                        .map(Product::getPrice)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add))
-                .status(OrderStatus.PENDING)
-                .build();
-
+        Order newOrder = createOrder(client, productMap.values());
         Order savedOrder = orderRepository.save(newOrder);
 
-        List<OrderProduct> orderProductList = new ArrayList<>();
+        List<OrderProduct> orderProducts = buildOrderProducts(orderDTO, savedOrder, productMap);
+        orderProductRepository.saveAll(orderProducts);
 
-        order.getOrderItems().forEach(item -> {
-            Product product = mapProducts.get(item.getProductId());
-
-            OrderProduct orderProduct = orderProductRepository.findByOrderIdAndProductId(savedOrder.getId(), product.getId());
-            orderProduct.setQuantity(item.getQuantity());
-            orderProductList.add(orderProduct);
-        });
-
-        orderProductRepository.saveAll(orderProductList);
-
-        OrderDTO orderDto = OrderDTO.builder()
-                .orderNumber(savedOrder.getId())
-                .date(savedOrder.getDate())
-                .status(savedOrder.getStatus())
-                .totalAmount(savedOrder.getTotalAmount())
-                .client(savedOrder.getClient().getName())
-                .orderItems(orderProductList.stream()
-                        .map(orderProduct ->
-                                OrderItemDTO.builder()
-                                        .productId(orderProduct.getProduct().getId())
-                                        .product(orderProduct.getProduct().getName())
-                                        .quantity(orderProduct.getQuantity())
-                                        .price(orderProduct.getProduct().getPrice())
-                                        .build()
-                        )
-                        .collect(Collectors.toSet()))
-                .build();
-
-        return Optional.of(orderDto);
+        return Optional.of(buildOrderDTO(savedOrder, orderProducts));
     }
 
     public Optional<OrderDTO> findById(Long orderId) {
@@ -89,27 +51,63 @@ public class OrderService {
                 .orElseThrow(() -> new EntityNotFoundException("Order not found"));
 
         List<OrderProduct> orderProducts = orderProductRepository.findByOrderId(order.getId());
-        Set<OrderItemDTO> orderItems = orderProducts.stream()
-                .map(orderProduct ->
-                        OrderItemDTO.builder()
-                                .productId(orderProduct.getProduct().getId())
-                                .product(orderProduct.getProduct().getName())
-                                .quantity(orderProduct.getQuantity())
-                                .price(orderProduct.getProduct().getPrice())
-                                .build()
-                )
+
+        return Optional.of(buildOrderDTO(order, orderProducts));
+    }
+
+    private Map<Long, Product> getProductMap(OrderDTO orderDTO) {
+        Set<Long> productIds = orderDTO.getOrderItems().stream()
+                .map(OrderItemDTO::getProductId)
                 .collect(Collectors.toSet());
 
-        OrderDTO orderDto = OrderDTO.builder()
+        return productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, product -> product));
+    }
+
+    private Order createOrder(Client client, Collection<Product> products) {
+        BigDecimal total = products.stream()
+                .map(Product::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return Order.builder()
+                .date(LocalDateTime.now())
+                .client(client)
+                .products(new HashSet<>(products))
+                .totalAmount(total)
+                .status(OrderStatus.PENDING)
+                .build();
+    }
+
+    private List<OrderProduct> buildOrderProducts(OrderDTO orderDTO, Order order, Map<Long, Product> productMap) {
+        return orderDTO.getOrderItems().stream()
+                .map(item -> {
+                    Product product = productMap.get(item.getProductId());
+                    OrderProduct orderProduct = orderProductRepository
+                            .findByOrderIdAndProductId(order.getId(), product.getId());
+                    orderProduct.setQuantity(item.getQuantity());
+                    return orderProduct;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private OrderDTO buildOrderDTO(Order order, List<OrderProduct> orderProducts) {
+        Set<OrderItemDTO> items = orderProducts.stream()
+                .map(op -> OrderItemDTO.builder()
+                        .productId(op.getProduct().getId())
+                        .product(op.getProduct().getName())
+                        .quantity(op.getQuantity())
+                        .price(op.getProduct().getPrice())
+                        .build())
+                .collect(Collectors.toSet());
+
+        return OrderDTO.builder()
                 .orderNumber(order.getId())
                 .date(order.getDate())
                 .status(order.getStatus())
                 .totalAmount(order.getTotalAmount())
                 .client(order.getClient().getName())
-                .orderItems(orderItems)
+                .orderItems(items)
                 .build();
-
-        return Optional.of(orderDto);
     }
 
 }
