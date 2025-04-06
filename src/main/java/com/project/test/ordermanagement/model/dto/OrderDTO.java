@@ -21,6 +21,7 @@ public class OrderDTO {
     private String taxId;
 
     private String client;
+    private String address;
     private Set<OrderItemDTO> orderItems;
     private LocalDateTime date;
     private BigDecimal totalAmount;

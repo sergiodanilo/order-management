@@ -8,10 +8,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "resale_order")
+    @Table(name = "resale_order")
 @Data
 @Builder
 @NoArgsConstructor
@@ -26,8 +28,11 @@ public class ResaleOrder {
     @Column(unique = true, nullable = false)
     private UUID orderNumber;
 
-    @Column(unique = true, nullable = false)
-    private String orderIds;
+    @OneToMany(
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<Order> orders = new ArrayList<>();
 
     @Column(nullable = false)
     private LocalDateTime orderDate;

@@ -50,7 +50,6 @@ class ResaleOrderServiceTest {
 
     @Test
     void testSendResaleOrders_success() {
-        // Given
         List<Long> orderIds = List.of(1L, 2L);
         UUID orderNumber = UUID.randomUUID();
 
@@ -95,10 +94,8 @@ class ResaleOrderServiceTest {
         when(orderProductRepository.findByOrderIdAndProductIdsIn(eq(1L), anySet())).thenReturn(List.of(orderProduct1));
         when(orderProductRepository.findByOrderIdAndProductIdsIn(eq(2L), anySet())).thenReturn(List.of(orderProduct2));
 
-        // When
         ResaleOrderDTO result = resaleOrderService.sendResaleOrders(orderIds);
 
-        // Then
         assertNotNull(result);
         assertEquals(orderNumber, result.getOrderNumber());
         assertEquals(2, result.getOrders().size());
@@ -108,7 +105,6 @@ class ResaleOrderServiceTest {
 
     @Test
     void testSendResaleOrders_throwsResaleOrderException_whenQuantityTooLow() {
-        // Given
         List<Long> orderIds = List.of(1L);
 
         Product product = Product.builder().id(10L).name("Product A").price(BigDecimal.TEN).build();
@@ -134,7 +130,6 @@ class ResaleOrderServiceTest {
         when(orderRepository.findAllById(orderIds)).thenReturn(List.of(order));
         when(orderProductRepository.findByOrderIdAndProductIdsIn(eq(1L), anySet())).thenReturn(List.of(orderProduct));
 
-        // When / Then
         assertThrows(ResaleOrderException.class, () -> resaleOrderService.sendResaleOrders(orderIds));
         verify(orderRepository, never()).saveAll(anyList());
         verify(resaleOrderRepository, never()).save(any(ResaleOrder.class));

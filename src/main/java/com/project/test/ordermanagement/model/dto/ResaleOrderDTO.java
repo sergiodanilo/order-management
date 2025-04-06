@@ -10,6 +10,7 @@ import java.util.UUID;
 @Builder
 public class ResaleOrderDTO {
 
+    private Long id;
     private UUID orderNumber;
     private Set<OrderDTO> orders;
 
