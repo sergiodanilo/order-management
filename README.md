@@ -44,7 +44,7 @@ This will automatically generate:
 - 10 Products
 - 1 Order with 5 products
 
-### Send a batch of order to API
+### Send a batch of orders to API
 
 You can use the following endpoint to send a batch of orders to the external API (mocked):
 ### `POST /api/resale-orders`
@@ -54,3 +54,10 @@ The payload is a list of order IDs:
 ```
 
 You can customize the logic in StartupController to generate more data if needed.
+
+## H2 Console
+To access the H2 Console, navigate to:
+```http://localhost:8080/h2-console```
+
+Don't forget to change the JDBC URL to: 
+```jdbc:h2:mem:testdb```

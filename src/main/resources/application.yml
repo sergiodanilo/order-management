@@ -1,11 +1,11 @@
-# Configurações do servidor
+# ConfiguraÃ§Ãµes do servidor
 server:
   port: 8080
 
-# Configurações de BD H2
+# ConfiguraÃ§Ãµes de BD H2
 spring:
   application:
-    name: "resale"
+    name: "order-management"
 
   datasource:
     url: jdbc:h2:mem:testedb
@@ -24,17 +24,17 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
-    #show-sql: true
-    #properties:
-      #hibernate:
-        #format_sql: true
+        #show-sql: true
+        #properties:
+        #hibernate:
+      #format_sql: true
 
-# Configurações de Logging
+# ConfiguraÃ§Ãµes de Logging
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
 
-# Configurações do Circuit Breaker
+# ConfiguraÃ§Ãµes do Circuit Breaker
 management:
   endpoint.health.show-details: always
   endpoints.web.exposure.include: health,info,metrics,prometheus
