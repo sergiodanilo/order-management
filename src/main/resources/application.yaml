@@ -1,0 +1,61 @@
+# Configurações do servidor
+server:
+  port: 8080
+
+# Configurações de BD H2
+spring:
+  application:
+    name: "resale"
+
+  datasource:
+    url: jdbc:h2:mem:testedb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # Console H2
+  h2:
+    console:
+      enabled: true
+    path: /h2-console
+
+  # JPA e Hibernate
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    #show-sql: true
+    #properties:
+      #hibernate:
+        #format_sql: true
+
+# Configurações de Logging
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
+
+# Configurações do Circuit Breaker
+management:
+  endpoint.health.show-details: always
+  endpoints.web.exposure.include: health,info,metrics,prometheus
+  health:
+    circuitbreakers:
+      enabled: true
+    ratelimiters:
+      enabled: true
+
+#Circuit Breaker
+resilience4j:
+  circuitbreaker:
+    instances:
+      address:
+        slidingWindowType: COUNT_BASED
+        registerHealthIndicator: true
+        slidingWindowSize: 6
+        failureRateThreshold: 50
+        slowCallDurationThreshold: 100
+        slowCallRateThreshold: 80
+        waitDurationInOpenState: 60s
+        permittedNumberOfCallsInHalfOpenState: 3
+        enableAutomaticTransitionFromOpenToClosedState: true
+        transitionFromOpenToClosedStateOnSuccessfulCall: true
