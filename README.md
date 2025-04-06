@@ -21,7 +21,7 @@ A Spring Boot project for managing orders in a sales system. The application sup
 ### Running the Application
 ```
 # Clone the repository
-git clone https://github.com/your-org/your-project.git
+git clone https://github.com/sergiodanilo/order-management.git
 
 cd your-project
 
