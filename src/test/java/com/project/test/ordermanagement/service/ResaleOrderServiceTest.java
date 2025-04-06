@@ -94,6 +94,7 @@ class ResaleOrderServiceTest {
         when(orderProductRepository.findByOrderIdAndProductId(2L, 20L)).thenReturn(orderProduct2);
         when(orderProductRepository.findByOrderIdAndProductIdsIn(eq(1L), anySet())).thenReturn(List.of(orderProduct1));
         when(orderProductRepository.findByOrderIdAndProductIdsIn(eq(2L), anySet())).thenReturn(List.of(orderProduct2));
+        when(resaleOrderService.save(any())).thenReturn(ResaleOrder.builder().id(1L).build());
 
         ResaleOrderDTO result = resaleOrderService.sendResaleOrders(orderIds);
 
