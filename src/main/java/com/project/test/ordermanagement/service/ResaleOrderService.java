@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -126,7 +127,8 @@ public class ResaleOrderService extends CRUDBaseServiceImpl<ResaleOrder, Long> {
     private Set<OrderItemDTO> generateOrderItems(Order order) {
         return order.getProducts().stream()
                 .map(product -> {
-                    OrderProduct op = orderProductRepository.findByOrderIdAndProductId(order.getId(), product.getId());
+                    Optional<OrderProduct> optOrderProduct = orderProductRepository.findByOrderIdAndProductId(order.getId(), product.getId());
+                    OrderProduct op = optOrderProduct.orElseThrow(() -> new ResaleOrderException("OrderProduct not found"));
                     return OrderItemDTO.builder()
                             .productId(product.getId())
                             .quantity(op.getQuantity())

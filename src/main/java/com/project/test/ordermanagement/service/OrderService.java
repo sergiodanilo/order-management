@@ -82,8 +82,10 @@ public class OrderService {
         return orderDTO.getOrderItems().stream()
                 .map(item -> {
                     Product product = productMap.get(item.getProductId());
-                    OrderProduct orderProduct = orderProductRepository
+                    Optional<OrderProduct> optOrderProduct = orderProductRepository
                             .findByOrderIdAndProductId(order.getId(), product.getId());
+                    OrderProduct orderProduct = optOrderProduct.orElseThrow(() -> new RuntimeException("OrderProduct not found"));
+
                     orderProduct.setQuantity(item.getQuantity());
                     return orderProduct;
                 })

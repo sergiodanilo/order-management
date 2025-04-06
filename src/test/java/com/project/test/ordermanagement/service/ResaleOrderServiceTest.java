@@ -17,6 +17,7 @@ import org.mockito.MockitoAnnotations;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -53,8 +54,21 @@ class ResaleOrderServiceTest {
         List<Long> orderIds = List.of(1L, 2L);
         UUID orderNumber = UUID.randomUUID();
 
-        Product product1 = Product.builder().id(10L).name("Product A").price(BigDecimal.TEN).build();
-        Product product2 = Product.builder().id(20L).name("Product B").price(BigDecimal.TEN).build();
+        Product product1 = Product.builder()
+                .id(10L)
+                .name("Product A")
+                .price(BigDecimal.TEN)
+                .measureUnit("Un")
+                .sku("1")
+                .build();
+
+        Product product2 = Product.builder()
+                .id(20L)
+                .name("Product B")
+                .price(BigDecimal.TEN)
+                .measureUnit("Un")
+                .sku("2")
+                .build();
 
         Client client1 = Client.builder().id(1L).name("Client A").taxId("123456789").build();
         Client client2 = Client.builder().id(2L).name("Client B").taxId("987654321").build();
@@ -90,8 +104,8 @@ class ResaleOrderServiceTest {
 
         when(resaleOrderApi.sendResaleOrders()).thenReturn(resaleOrderDTO);
         when(orderRepository.findAllById(orderIds)).thenReturn(List.of(order1, order2));
-        when(orderProductRepository.findByOrderIdAndProductId(1L, 10L)).thenReturn(orderProduct1);
-        when(orderProductRepository.findByOrderIdAndProductId(2L, 20L)).thenReturn(orderProduct2);
+        when(orderProductRepository.findByOrderIdAndProductId(1L, 10L)).thenReturn(Optional.of(orderProduct1));
+        when(orderProductRepository.findByOrderIdAndProductId(2L, 20L)).thenReturn(Optional.of(orderProduct2));
         when(orderProductRepository.findByOrderIdAndProductIdsIn(eq(1L), anySet())).thenReturn(List.of(orderProduct1));
         when(orderProductRepository.findByOrderIdAndProductIdsIn(eq(2L), anySet())).thenReturn(List.of(orderProduct2));
         when(resaleOrderService.save(any())).thenReturn(ResaleOrder.builder().id(1L).build());

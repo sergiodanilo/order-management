@@ -86,9 +86,9 @@ class OrderServiceTest {
         when(productRepository.findAllById(anySet())).thenReturn(List.of(product1, product2));
         when(orderRepository.save(any())).thenReturn(orderEntity);
         when(orderProductRepository.findByOrderIdAndProductId(eq(10L), eq(1L)))
-                .thenReturn(orderProduct1);
+                .thenReturn(Optional.of(orderProduct1));
         when(orderProductRepository.findByOrderIdAndProductId(eq(10L), eq(2L)))
-                .thenReturn(orderProduct2);
+                .thenReturn(Optional.of(orderProduct2));
 
         Optional<OrderDTO> result = orderService.registerOrder(inputOrder);
 
