@@ -7,7 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Data
@@ -22,7 +22,7 @@ public class OrderDTO {
 
     private String client;
     private Set<OrderItemDTO> orderItems;
-    private LocalDate date;
+    private LocalDateTime date;
     private BigDecimal totalAmount;
     private OrderStatus status;
 

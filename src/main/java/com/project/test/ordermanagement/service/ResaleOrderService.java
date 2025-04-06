@@ -5,40 +5,79 @@ import com.project.test.ordermanagement.exceptions.ResaleOrderException;
 import com.project.test.ordermanagement.model.Order;
 import com.project.test.ordermanagement.model.OrderProduct;
 import com.project.test.ordermanagement.model.Product;
+import com.project.test.ordermanagement.model.ResaleOrder;
+import com.project.test.ordermanagement.model.dto.OrderDTO;
+import com.project.test.ordermanagement.model.dto.OrderItemDTO;
 import com.project.test.ordermanagement.model.dto.ResaleOrderDTO;
 import com.project.test.ordermanagement.model.enums.OrderStatus;
 import com.project.test.ordermanagement.repository.OrderProductRepository;
 import com.project.test.ordermanagement.repository.OrderRepository;
-import lombok.RequiredArgsConstructor;
+import com.project.test.ordermanagement.repository.ResaleOrderRepository;
+import com.project.test.ordermanagement.service.base.CRUDBaseServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
-public class ResaleOrderService {
+public class ResaleOrderService extends CRUDBaseServiceImpl<ResaleOrder, Long> {
 
     private final ResaleOrderApi resaleOrderApi;
     private final OrderRepository orderRepository;
     private final OrderProductRepository orderProductRepository;
 
+    public ResaleOrderService(ResaleOrderRepository repository,
+                              ResaleOrderApi resaleOrderApi,
+                              OrderRepository orderRepository,
+                              OrderProductRepository orderProductRepository) {
+        super(repository);
+        this.resaleOrderApi = resaleOrderApi;
+        this.orderRepository = orderRepository;
+        this.orderProductRepository = orderProductRepository;
+    }
+
     public ResaleOrderDTO sendResaleOrders(List<Long> orderIds) {
-        ResaleOrderDTO resaleOrder = resaleOrderApi.sendResaleOrders();
+        ResaleOrderDTO resaleOrderDTO = resaleOrderApi.sendResaleOrders();
 
         List<Order> orders = orderRepository.findAllById(orderIds);
         validateOrdersQuantity(orders);
 
-        if (resaleOrder.getOrderNumber() != null) {
+        if (resaleOrderDTO.getOrderNumber() != null) {
             orders.forEach(order -> order.setStatus(OrderStatus.DELIVERED));
             orderRepository.saveAll(orders);
+
+            ResaleOrder resaleOrder = ResaleOrder.builder()
+                    .orderNumber(resaleOrderDTO.getOrderNumber())
+                    .orderDate(LocalDateTime.now())
+                    .orderIds(orderIds.stream().map(String::valueOf).collect(Collectors.joining(",")))
+                    .build();
+
+            this.save(resaleOrder);
         }
 
-        resaleOrder.setOrders(orders);
-        return resaleOrder;
+        Set<OrderDTO> orderDTOs = orders.stream().map(order ->
+            OrderDTO.builder()
+                    .orderNumber(order.getId())
+                    .taxId(order.getClient().getTaxId())
+                    .orderItems(order.getProducts().stream()
+                            .map(product -> OrderItemDTO.builder()
+                                    .productId(product.getId())
+                                    .quantity(orderProductRepository.findByOrderIdAndProductId(order.getId(), product.getId()).getQuantity())
+                                    .build())
+                            .collect(Collectors.toSet()))
+                    .date(order.getDate())
+                    .totalAmount(order.getTotalAmount())
+                    .status(order.getStatus())
+                    .client(order.getClient().getName())
+                    .build()
+        ).collect(Collectors.toSet());
+
+        resaleOrderDTO.setOrders(orderDTOs);
+        return resaleOrderDTO;
     }
 
     private void validateOrdersQuantity(List<Order> orders) {
@@ -48,7 +87,7 @@ public class ResaleOrderService {
             List<OrderProduct> orderProducts = orderProductRepository.findByOrderIdAndProductIdsIn(order.getId(), productIds);
             sum += orderProducts.stream().mapToInt(OrderProduct::getQuantity).sum();
         }
-        if (sum >= 1000) throw new ResaleOrderException("Orders quantity is less than 1000");
+        if (sum < 1000) throw new ResaleOrderException("Orders quantity is less than 1000");
     }
 
 }

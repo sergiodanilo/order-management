@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -67,10 +68,9 @@ public class StartupController {
         Set<OrderItemDTO> orderItems = new HashSet<>();
 
         for (int i = 0; i < 5; i++) {
-            int quantity = new Random().nextInt(1, 100);
             OrderItemDTO orderItemDTO = OrderItemDTO.builder()
                     .productId((long) i + 1)
-                    .quantity(quantity)
+                    .quantity(200)
                     .build();
 
             orderItems.add(orderItemDTO);
@@ -79,6 +79,7 @@ public class StartupController {
         OrderDTO orderDTO = OrderDTO.builder()
                 .taxId(client.getTaxId())
                 .orderItems(orderItems)
+                .date(LocalDateTime.now())
                 .build();
 
         orderService.registerOrder(orderDTO);

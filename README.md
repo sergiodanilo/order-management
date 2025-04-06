@@ -55,7 +55,7 @@ The payload is a list of order IDs:
 
 You can customize the logic in StartupController to generate more data if needed.
 
-## H2 Console
+## 🖥️ H2 Console
 To access the H2 Console, navigate to:
 ```http://localhost:8080/h2-console```
 

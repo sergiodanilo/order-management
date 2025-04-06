@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -40,7 +40,7 @@ public class OrderService {
                 .collect(Collectors.toMap(Product::getId, product -> product));
 
         Order newOrder = Order.builder()
-                .date(LocalDate.now())
+                .date(LocalDateTime.now())
                 .products(products)
                 .client(client)
                 .totalAmount(products.stream()

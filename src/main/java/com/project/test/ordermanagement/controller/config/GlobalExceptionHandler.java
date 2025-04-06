@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", "Data integrity violation");
+        return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", "Data integrity violation, you probably have a duplicate entry");
     }
 
     @ExceptionHandler(Exception.class)

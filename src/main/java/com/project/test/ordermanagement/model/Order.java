@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
@@ -35,10 +35,13 @@ public class Order {
     )
     private Set<Product> products;
 
-    private LocalDate date;
+    @Column(nullable = false)
+    private LocalDateTime date;
 
+    @Column(nullable = false)
     private BigDecimal totalAmount;
 
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
